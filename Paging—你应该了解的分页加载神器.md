@@ -31,7 +31,7 @@
 
 接触一个新事物，我们总是想先直观的看到它到底是什么样子，那么废话不多说，二营长，上效果图！
 
-
+![Paging](https://github.com/CoolCsf/pic/blob/master/Paging.gif)
 
 要说 ```Paging``` 是什么东东，首先就要说到 App 分页加载的设计上，一般来说，App 的分页加载有两种情况：
 
@@ -47,8 +47,6 @@
 ### Paging 基本组成
 
 `` Paging ``  在设计之初，就采用了很好的设计，隔离了数据层和 `` UI`` 层，并通过中间层进行连接，达到数据和`` UI`` 统一的效果，具体的基本骨架如下图：
-
-![Paging](https://github.com/CoolCsf/pic/blob/master/Paging.gif)
 
 
 
