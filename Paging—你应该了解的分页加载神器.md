@@ -48,7 +48,7 @@
 
 `` Paging ``  在设计之初，就采用了很好的设计，隔离了数据层和 `` UI`` 层，并通过中间层进行连接，达到数据和`` UI`` 统一的效果，具体的基本骨架如下图：
 
-
+![Paging](https://github.com/CoolCsf/pic/blob/master/Paging.gif)
 
 
 
