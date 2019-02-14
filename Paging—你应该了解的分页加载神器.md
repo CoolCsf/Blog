@@ -93,47 +93,51 @@ Implement a DataSource using PageKeyedDataSource if you need to use data from pa
 道理说再多也不如 See the fuck code ：
 
 ```kotlin
-class MPageKeyedDataSource<Source>() :
-    PageKeyedDataSource<Int, Source>() {
+class ArticlePageKeyDataSource : PageKeyedDataSource<Int, Article>() {
     private val initPage = 1
-    override fun loadInitial(params: LoadInitialParams<Int>, callback: LoadInitialCallback<Int, Source>) {
+    override fun loadInitial(params: LoadInitialParams<Int>, callback: LoadInitialCallback<Int, Article>) {
         //调用时机：当列表第一次获取数据时调用
         // 参数讲解：
         // params: params封装了requestedLoadSize和placeholdersEnabled，这两个参数都是从PagedList.Config中设置的，后面会提到，这里用不到，不做赘述
         // callback：callback是UI数据更新的一个回调，当我们成功获取到数据之后，需要调用callback来通知UI更新
-        //伪代码：
-        Net().request(0).call(onSuccess {data->
+        getFeed(initPage, params.requestedLoadSize).subscribe({
             //参数讲解：
-            //data：更新UI的List，类型必须是List<Source>
+            //it：更新UI的List，类型必须是List<Article>
             //第二个参数： 调用loadBefore时所需要的key,在这里我们不需要加载上一页，所以给的是null
             //第三个参数： 调用loadAfter时所需要的key，在这里我们需要加载下一页的参数，而我们需要的是加载的页数，那么就是初始页面+1
-            callback.onResult(data, null,initPage+1)
-        }, onError {
-
+            callback.onResult(it, null, initPage + 1)
+        }, {
+            Log.e("loadInitial", it.message)
         })
     }
 
-    override fun loadAfter(params: LoadParams<Int>, callback: LoadCallback<Long, Source>) {
+    override fun loadAfter(params: LoadParams<Int>, callback: LoadCallback<Int, Article>) {
         //调用时机：触发加载下一页的时候调用
         // 参数讲解：
         // params: 可以从中获取到由loadInitial或上一次loadAfter所传递的key
         // callback：callback是UI数据更新的一个回调，当我们成功获取到数据之后，需要调用callback来通知UI更新
-        //伪代码：
-        Net().request(parma.key).call(onSuccess {
-            //参数讲解：
-            //data：更新UI的List，类型必须是List<Source>
+        getFeed(initPage, params.requestedLoadSize).subscribe({
+             //参数讲解：
+            //it：更新UI的List，类型必须是List<Article>
             //第二个参数： 调用下一个loadAfter时所需要的key，这里用上个页面传下来的页数+1，这样就可以保证页数的连续增加了。
-            callback.onResult(data,  parma.key+1)
-        }, onError {
-
+            callback.onResult(it, initPage + 1)
+        }, {
+            Log.e("loadAfter", it.message)
         })
     }
 
-    override fun loadBefore(params: LoadParams<Int>, callback: LoadCallback<Int, Source>) {
+    override fun loadBefore(params: LoadParams<Int>, callback: LoadCallback<Int, Article>) {
         // 调用时机：触发加载上一页的时候调用
         // 调用方式与 loadAfter 一致，当前不需要，可忽略。
     }
 
+    private fun getFeed(pageIndex: Int, loadSize: Int): Observable<List<Article>> {
+        return AppController.restApi.fetchFeed(
+            AppController.query, AppController.apiKey, pageIndex.toLong(), loadSize
+        ).subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .map { it.articles }
+    }
 }
 ```
 
@@ -163,47 +167,52 @@ see the fuck code :
 
 ```kotlin
 
-class MItemKeyDataSource<Key, Source>(private val recallBack: IItemKeyDataSource<Key, Source>) :
-    ItemKeyedDataSource<Key, Source>() {
-    override fun loadInitial(params: LoadInitialParams<Key>, callback: LoadInitialCallback<Source>) {
-         //调用时机：触发加载下一页的时候调用
+class ArticleItemKeyDataSource : ItemKeyedDataSource<Int, Article>() {
+    override fun loadInitial(params: LoadInitialParams<Int>, callback: LoadInitialCallback<Article>) {
+        //调用时机：当列表第一次获取数据时调用
+        // 可以从param 中获取到设置的initialKey
+        // callback：callback是UI数据更新的一个回调，当我们成功获取到数据之后，需要调用callback来通知UI更新
+        // 这里由于场景问题不需要用到key，你可以根据自己的场景进行使用
+        Log.d("loadBefore", "id:${params.requestedInitialKey}")
+        getFeed().subscribe({
+            callback.onResult(it)
+        }, {
+            Log.e("loadInitial", it.message)
+        })
+    }
+
+    override fun loadAfter(params: LoadParams<Int>, callback: LoadCallback<Article>) {
+        // 调用时机：触发加载下一页的时候调用
         // 参数讲解：
         // params: 可以从中获取到由loadInitial或上一次loadAfter所传递的key
         // callback：callback是UI数据更新的一个回调，当我们成功获取到数据之后，需要调用callback来通知UI更新
-        //伪代码：
-        Net().request(0).call(onSuccess {data->
-            //参数讲解：
-            //data：更新UI的List，类型必须是List<Source>
-            callback.onResult(data)
-        }, onError {
-
+        // 这里由于场景问题不需要用到key，你可以根据自己的场景进行使用
+        Log.d("loadBefore", "id:${params.key}")
+        getFeed().subscribe({
+            callback.onResult(it)
+        }, {
+            Log.e("loadInitial", it.message)
         })
     }
 
-    override fun loadAfter(params: LoadParams<Key>, callback: LoadCallback<Source>) {
-         //调用时机：当列表第一次获取数据时调用
-        // callback：callback是UI数据更新的一个回调，当我们成功获取到数据之后，需要调用callback来通知UI更新
-        //伪代码：
-        Net().request(params.key).call(onSuccess {data->
-            //参数讲解：
-            //data：更新UI的List，类型必须是List<Source>
-            callback.onResult(data)
-        }, onError {
-
-        })
-    }
-
-    override fun loadBefore(params: LoadParams<Key>, callback: LoadCallback<Source>) {
-         // 调用时机：触发加载上一页的时候调用
+    override fun loadBefore(params: LoadParams<Int>, callback: LoadCallback<Article>) {
+        // 调用时机：触发加载上一页的时候调用
         // 调用方式与 loadAfter 一致，当前不需要，可忽略。
     }
 
-    override fun getKey(item: Source): Key {
-        // 调用时机，当有触发 load 的时候，比如 loadInitial 或者 loadAfter 或者 loadBefore 的时候，所需要的 key 的时候都会调用此方法。
-        return item.id;
+    override fun getKey(item: Article): Int {
+        // 调用时机，当有触发 load 的时候，
+        // 比如 loadInitial 或者 loadAfter 或者 loadBefore 的时候，所需要的 key 的时候都会调用此方法。
+        return item.id.toInt()
     }
 
-
+    private fun getFeed(): Observable<List<Article>> {
+        return AppController.restApi.fetchArticle(
+            AppController.query, AppController.apiKey
+        ).subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .map { it.articles }
+    }
 }
 ```
 
@@ -233,7 +242,7 @@ Note that unless placeholders are disabled PositionalDataSource requires countin
 
 See the fuck code ：
 
-```java
+```kotlin
 class ItemDataSource : PositionalDataSource<Source>() {
     private fun computeCount(): Int {
         // 计算数量
